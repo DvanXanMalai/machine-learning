@@ -148,6 +148,18 @@ input_features = [
     "Area",
 ]
 
+# @title Solution
+# Features used to train the model on.
+# Specify all features.
+all_input_features = [
+    "Eccentricity",
+    "Major_Axis_Length",
+    "Minor_Axis_Length",
+    "Area",
+    "Convex_Area",
+    "Perimeter",
+    "Extent",
+]
 
 # @title Define the functions that create and train a model.
 
@@ -245,6 +257,50 @@ experiment = train_model("baseline", model, train_features, train_labels, settin
 ml_edu.results.plot_experiment_metrics(experiment, ["accuracy", "precision", "recall"])
 ml_edu.results.plot_experiment_metrics(experiment, ["auc"])
 
+# train will all features
+settings_all_features = ml_edu.experiment.ExperimentSettings(
+    learning_rate=0.001,
+    number_epochs=60,
+    batch_size=100,
+    classification_threshold=0.5,
+    input_features=all_input_features,
+)
+
+# Modify the following definition of METRICS to generate
+# not only accuracy and precision, but also recall:
+metrics = [
+    keras.metrics.BinaryAccuracy(
+        name="accuracy",
+        threshold=settings_all_features.classification_threshold,
+    ),
+    keras.metrics.Precision(
+        name="precision",
+        thresholds=settings_all_features.classification_threshold,
+    ),
+    keras.metrics.Recall(
+        name="recall", thresholds=settings_all_features.classification_threshold
+    ),
+    keras.metrics.AUC(num_thresholds=100, name="auc"),
+]
+
+# Establish the model's topography.
+model_all_features = create_model(settings_all_features, metrics)
+
+# Train the model on the training set.
+experiment_all_features = train_model(
+    "all features",
+    model_all_features,
+    train_features,
+    train_labels,
+    settings_all_features,
+)
+
+# Plot metrics vs. epochs
+ml_edu.results.plot_experiment_metrics(
+    experiment_all_features, ["accuracy", "precision", "recall"]
+)
+ml_edu.results.plot_experiment_metrics(experiment_all_features, ["auc"])
+
 
 def compare_train_test(
     experiment: ml_edu.experiment.Experiment, test_metrics: dict[str, float]
@@ -259,3 +315,16 @@ def compare_train_test(
 # Evaluate test metrics
 test_metrics = experiment.evaluate(test_features, test_labels)
 compare_train_test(experiment, test_metrics)
+
+test_metrics_all_features = experiment_all_features.evaluate(
+    test_features,
+    test_labels,
+)
+compare_train_test(experiment_all_features, test_metrics_all_features)
+
+ml_edu.results.compare_experiment(
+    [experiment, experiment_all_features],
+    ["accuracy", "auc"],
+    test_features,
+    test_labels,
+)
